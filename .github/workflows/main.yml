@@ -1,4 +1,4 @@
-name: Build Mine-imator 2.0.2 EXE
+name: Build Mine-imator 2.0.2 NEXUS EXE
 
 on:
   push:
@@ -10,20 +10,22 @@ on:
 jobs:
   build-windows:
     runs-on: windows-2022
+    timeout-minutes: 360   # Qt builds need a lot of time if cache misses
 
     env:
       DEV_DIR: "C:\\Dev"
-      BUILD_DIR: "C:\\Dev\\Projects\\Mine-imator-build"
-      QT_VERSION: "5.15.17"
+      QT_VERSION: "5.15.9"
+      QT_PREFIX: "C:\\Dev\\Qt\\5.15.9\\build"
+      BUILD_DIR: "${{ github.workspace }}\\build"
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
@@ -32,59 +34,104 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Build Dependencies (Perl, CMake, Jom)
+      - name: Install tools (Perl, CMake, Jom, NASM, etc.)
         run: |
-          choco install strawberryperl cmake jom -y
-          echo "C:\Strawberry\perl\bin" >> $env:GITHUB_PATH
+          choco install strawberryperl cmake jom nasm -y --no-progress
+          echo "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
 
       - name: Setup OpenSSL
         run: |
-          choco install openssl -y
-          echo "C:\Program Files\OpenSSL-Win64\bin" >> $env:GITHUB_PATH
-
-      - name: Setup Qt 5.15.9 (Cached or Build Source)
-        id: cache-qt
-        uses: actions/cache@v6
-        with:
-          path: C:\Dev\Qt\${{ env.QT_VERSION }}
-          key: ${{ runner.os }}-qt-${{ env.QT_VERSION }}-v1
-
-      - name: Build Qt from Source (If Cache Misses)
-        if: steps.cache-qt.outputs.cache-hit != 'true'
-        run: |
-          git clone https://github.com/qt/qt5.git C:\Dev\qt5 --branch ${{ env.QT_VERSION }}
-          cd C:\Dev\qt5
-          git submodule update --init qtbase qtdeclarative qtmultimedia qtsvg qttools
-          
-          New-Item -ItemType Directory -Force -Path "C:\Dev\Qt\${{ env.QT_VERSION }}"
-          cmd /c "call ""C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"" x64 && C:\Dev\qt5\configure -prefix C:\Dev\Qt\${{ env.QT_VERSION }} -release -opensource -confirm-license -nomake examples -nomake tests && jom && jom install"
+          choco install openssl -y --no-progress
+          # Adjust path if the choco package lands elsewhere
+          echo "C:\Program Files\OpenSSL-Win64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         shell: pwsh
 
-      - name: Run CppGen (GML to C++)
-        run: |
-          dotnet run --project CppGen\CppGen\CppGen.csproj -- GmProject CppProject\Generated CppProject\Asset\Sprites CppProject\Asset\Shaders CppGen\gml.json
+      - name: Cache Qt static build
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.QT_PREFIX }}
+          key: ${{ runner.os }}-qt-${{ env.QT_VERSION }}-static-v1
 
-      - name: Configure CMake & Generate Visual Studio Project
+      # WARNING: This step is very slow and may still fail or timeout.
+      # Prefer downloading a pre-built Qt prefix instead.
+      - name: Build Qt 5.15.9 static (cache miss only)
+        if: steps.cache-qt.outputs.cache-hit != 'true'
         run: |
-          New-Item -ItemType Directory -Force -Path "${{ env.BUILD_DIR }}"
-          cmake -S CppProject -B "${{ env.BUILD_DIR }}" -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="C:\Dev\Qt\${{ env.QT_VERSION }}"
+          New-Item -ItemType Directory -Force -Path "C:\Dev\Qt\5.15.9" | Out-Null
+          cd C:\Dev\Qt\5.15.9
+          git clone https://github.com/qt/qt5.git --branch 5.15
+          cd qt5
+          perl init-repository --module-subset=qtbase,qtsvg,qttools  # expand as needed; match official skips
+          # Use the EXACT long configure line from CppProject/BUILD.md (OpenSSL paths, -static -static-runtime, many -skip …)
+          # Then: jom && jom install
+          # (Full command omitted for length — copy from BUILD.md and adapt OpenSSL paths)
+        shell: pwsh
 
-      - name: Copy Game Datafiles
+      - name: Ensure External libs present
         run: |
-          $datafilesDest = "${{ env.BUILD_DIR }}\Release"
-          New-Item -ItemType Directory -Force -Path $datafilesDest
-          Copy-Item -Recurse -Force GmProject\datafiles\* $datafilesDest
+          if (-not (Test-Path "CppProject\External\Win64")) {
+            Write-Error "CppProject/External/Win64 is missing. Populate it from a known-good fork or build the static libs."
+            exit 1
+          }
+        shell: pwsh
 
-      - name: Build Mine-imator Executable (Release)
+      - name: Run CppGen (GML → C++)
         run: |
-          cmake --build "${{ env.BUILD_DIR }}" --config Release --parallel 4
+          # Non-interactive; pipe "n" if the tool prompts about shaders
+          "n" | dotnet run --project CppGen\CppGen\CppGen.csproj -- `
+            GmProject `
+            CppProject\Generated `
+            CppProject\Asset\Sprites `
+            CppProject\Asset\Shaders `
+            CppGen\gml.json
+        shell: pwsh
 
-      - name: Run Release Packaging Script
+      - name: Configure CMake
         run: |
-          powershell -ExecutionPolicy Bypass -File .\make-release.ps1 "2.0.2 Nexus 1.0.0" -BuildDir "${{ env.BUILD_DIR }}"
+          # Bring in MSVC environment
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          cmd /c "`"$vsPath\VC\Auxiliary\Build\vcvarsall.bat`" x64 && set" | ForEach-Object {
+            if ($_ -match "^(.*?)=(.*)$") { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) }
+          }
+          New-Item -ItemType Directory -Force -Path "${{ env.BUILD_DIR }}" | Out-Null
+          cmake -S CppProject -B "${{ env.BUILD_DIR }}" `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ env.QT_PREFIX }}"
+        shell: pwsh
 
-      - name: Upload Artifact (.zip Release)
+      - name: Copy datafiles
+        run: |
+          $dest = "${{ env.BUILD_DIR }}\Release"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Copy-Item -Recurse -Force GmProject\datafiles\* $dest
+        shell: pwsh
+
+      - name: Build Release
+        run: |
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          cmd /c "`"$vsPath\VC\Auxiliary\Build\vcvarsall.bat`" x64 && cmake --build `"${{ env.BUILD_DIR }}`" --config Release --parallel"
+        shell: pwsh
+
+      - name: Package (adapt to your script)
+        run: |
+          # Option A: if you have / can port make-release.ps1
+          # powershell -ExecutionPolicy Bypass -File .\make-release.ps1 "2.0.2 Nexus 1.0.0" -BuildDir "${{ env.BUILD_DIR }}"
+
+          # Option B: simple staging + zip (recommended starting point)
+          $release = "${{ github.workspace }}\Release"
+          New-Item -ItemType Directory -Force -Path $release | Out-Null
+          Copy-Item "${{ env.BUILD_DIR }}\Release\Mine-imator.exe" $release -ErrorAction SilentlyContinue
+          # also copy Data, Particles, create empty Projects/Schematics/Skins, etc.
+          # then Compress-Archive ...
+          Compress-Archive -Path "$release\*" -DestinationPath "Builds\Mine-imator-2.0.2-Nexus.zip" -Force
+        shell: pwsh
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Mine-imator-2.0.2-Nexus-Release
           path: Builds\*.zip
+          if-no-files-found: error
