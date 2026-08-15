@@ -222,8 +222,10 @@ function settings_save()
 		
 	json_save_object_done()
 	
-	json_save_object_done()
-	json_save_done()
+	// AI companion
+	json_save_object_start("ai")
+		json_save_var("companion_port", setting_ai_companion_port)
+		json_save_var_bool("companion_autostart", setting_ai_companion_autostart)
 	
 	debug("Saved settings")
 }

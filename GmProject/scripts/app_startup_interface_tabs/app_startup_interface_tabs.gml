@@ -175,6 +175,20 @@ function app_startup_interface_tabs()
 			tbx_scenery_integrity = new_textbox_integer()
 			tbx_scenery_integrity.suffix = "%"
 		}
+		
+		// AI
+		ai = tab_add_category("ai", icons.WAND, tab_properties_ai, false)
+		with (ai)
+		{
+			tbx_prompt = new_textbox(false, 0, "")
+			tbx_model = new_textbox(true, 0, "")
+			tbx_endpoint = new_textbox(true, 0, "")
+			tbx_temperature = new_textbox_decimals()
+			tbx_max_tokens = new_textbox_integer()
+			tbx_provider = new_textbox(true, 0, "")
+			tbx_api_key = new_textbox(true, 0, "")
+			tbx_mcp = new_textbox(false, 0, "")
+		}
 	}
 	
 	lib_preview = properties.library.preview

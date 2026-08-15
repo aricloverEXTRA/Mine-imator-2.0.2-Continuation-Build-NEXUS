@@ -263,6 +263,14 @@ function settings_load()
 			ds_list_merge(setting_world_import_filter_list, worldimportmap[?"filter_list"])
 			setting_world_import_unload_regions = value_get_real(worldimportmap[?"unload_regions"], setting_world_import_unload_regions)
 		}
+		
+		// AI companion
+		var aimap = map[?"ai"]
+		if (ds_map_valid(aimap))
+		{
+			setting_ai_companion_port = value_get_real(aimap[?"companion_port"], setting_ai_companion_port)
+			setting_ai_companion_autostart = value_get_real(aimap[?"companion_autostart"], setting_ai_companion_autostart)
+		}
 	}
 	
 	// Legacy

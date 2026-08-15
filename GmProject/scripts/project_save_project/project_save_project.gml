@@ -49,5 +49,18 @@ function project_save_project()
 			json_save_var("zoom", cam_work_zoom)
 		json_save_object_done()
 		
+		// AI assistant
+		json_save_object_start("ai")
+			json_save_var_bool("enabled", project_ai_enabled)
+			json_save_var_bool("context_enabled", project_ai_context_enabled)
+			json_save_var("model", json_string_encode(project_ai_model))
+			json_save_var("endpoint", json_string_encode(project_ai_endpoint))
+			json_save_var("temperature", project_ai_temperature)
+			json_save_var("max_tokens", project_ai_max_tokens)
+			json_save_var("provider", json_string_encode(project_ai_provider))
+			json_save_var("api_key", json_string_encode(project_ai_api_key))
+			json_save_var("mcp_text", json_string_encode(project_ai_mcp_text))
+		json_save_object_done()
+		
 	json_save_object_done()
 }

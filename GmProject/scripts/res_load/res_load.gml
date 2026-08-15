@@ -232,7 +232,27 @@ function res_load(reload = false)
 				model_tex_normal_map = null
 			}
 			
-			// Load model from .mimodel or block .json
+			// Load model from .mimodel, .obj (PLUS-FORK) or block .json
+			if (filename_ext(fn) = ".obj")
+			{
+				// PLUS-FORK: convert the OBJ file to a .mimodel (mesh shape) next to it,
+				// then load it through the normal .mimodel path below.
+				var mimodelname = filename_change_ext(filename, ".mimodel")
+				var mimodelfn = load_folder + "/" + mimodelname
+				var parsed = obj_import(fn)
+				
+				if (parsed != null && obj_mesh_to_mimodel(parsed, mimodelfn))
+				{
+					filename = mimodelname
+					fn = mimodelfn
+				}
+				else
+				{
+					error("errorloadmodel")
+					break
+				}
+			}
+			
 			if (filename_ext(fn) = ".mimodel")
 			{
 				model_format = e_model_format.MIMODEL

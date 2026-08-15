@@ -10,6 +10,15 @@
 #include <QPushButton>
 #include <QTime>
 
+#if defined(_WIN32)
+	#include <windows.h>
+#elif defined(__APPLE__)
+	#include <sys/types.h>
+	#include <sys/sysctl.h>
+#else
+	#include <unistd.h>
+#endif
+
 namespace CppProject
 {
 	void array_copy(VarType dstArrRef, IntType dstIndex, VarType srcArrRef, IntType srcIndex, IntType len)
@@ -176,6 +185,44 @@ namespace CppProject
 			App->HttpResponse(request);
 		});
 		return App->httpNextId++;
+	}
+
+	IntType http_post(StringType url, StringType body)
+	{
+		QNetworkRequest req((QString)url);
+		req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+		req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+		QNetworkReply* reply = App->httpManager.post(req, body.toUtf8());
+		AppHandler::HttpRequest request = { App->httpNextId, reply, url };
+		reply->connect(reply, &QNetworkReply::finished, [request]()
+		{
+			App->HttpResponse(request);
+		});
+		return App->httpNextId++;
+	}
+
+	RealType system_total_ram_mb()
+	{
+#if defined(_WIN32)
+		MEMORYSTATUSEX ms;
+		ms.dwLength = sizeof(ms);
+		if (GlobalMemoryStatusEx(&ms))
+			return (RealType)(ms.ullTotalPhys / (1024 * 1024));
+		return 0;
+#elif defined(__APPLE__)
+		int mib[2] = { CTL_HW, HW_MEMSIZE };
+		uint64_t size = 0;
+		size_t len = sizeof(size);
+		if (sysctl(mib, 2, &size, &len, nullptr, 0) == 0)
+			return (RealType)(size / (1024 * 1024));
+		return 0;
+#else
+		long pages = sysconf(_SC_PHYS_PAGES);
+		long page_size = sysconf(_SC_PAGE_SIZE);
+		if (pages > 0 && page_size > 0)
+			return (RealType)((pages * page_size) / (1024 * 1024));
+		return 0;
+#endif
 	}
 
 	IntType irandom_range(IntType n1, IntType n2)

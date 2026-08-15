@@ -37,6 +37,33 @@ function project_reset()
 	view_main.camera = -4
 	view_second.camera = -5
 	
+	// AI assistant (per-project, managed from the Projects tab)
+	project_ai_enabled = false
+	project_ai_context_enabled = false
+	project_ai_model = "llama3.1"
+	project_ai_endpoint = "http://127.0.0.1:11434/v1"
+	project_ai_temperature = 0.7
+	project_ai_max_tokens = 2048
+	project_ai_provider = "auto"
+	project_ai_api_key = ""
+	project_ai_mcp_text = ""
+	app.ai_http_id = 0
+	app.ai_busy = false
+	app.ai_status = ""
+	app.ai_error = ""
+	app.ai_error_detail = ""
+	app.ai_warnings = ""
+	app.ai_reply = ""
+	app.ai_usage = ""
+	app.ai_applied = 0
+	app.ai_affected_tls = []
+	app.ai_any_render = false
+	app.ai_memory = []
+	app.ai_memory_summary = ""
+	app.ai_memory_compacting = false
+	app.ai_compact_id = 0
+	app.ai_pending_prompt = ""
+	
 	app_update_step = 0
 	
 	project_path_tl_array = []

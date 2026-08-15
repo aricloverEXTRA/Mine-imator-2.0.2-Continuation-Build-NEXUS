@@ -197,4 +197,18 @@ function app_event_http()
 			}
 		}
 	}
+	
+	// AI Assistant response
+	else if (async_load[?"id"] = app.ai_http_id && app.ai_http_id != 0)
+	{
+		app.ai_http_id = 0
+		ai_response()
+	}
+	
+	// AI memory compaction response
+	else if (async_load[?"id"] = app.ai_compact_id && app.ai_compact_id != 0)
+	{
+		app.ai_compact_id = 0
+		ai_compact_response()
+	}
 }

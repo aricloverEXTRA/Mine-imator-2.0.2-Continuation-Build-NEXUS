@@ -68,4 +68,19 @@ function project_load_project(map)
 		
 		camera_work_set_from()
 	}
+	
+	// AI assistant
+	var aimap = map[?"ai"];
+	if (ds_map_valid(aimap))
+	{
+		project_ai_enabled = value_get_real(aimap[?"enabled"], project_ai_enabled)
+		project_ai_context_enabled = value_get_real(aimap[?"context_enabled"], project_ai_context_enabled)
+		project_ai_model = value_get_string(aimap[?"model"], project_ai_model)
+		project_ai_endpoint = value_get_string(aimap[?"endpoint"], project_ai_endpoint)
+		project_ai_temperature = value_get_real(aimap[?"temperature"], project_ai_temperature)
+		project_ai_max_tokens = value_get_real(aimap[?"max_tokens"], project_ai_max_tokens)
+		project_ai_provider = value_get_string(aimap[?"provider"], project_ai_provider)
+		project_ai_api_key = value_get_string(aimap[?"api_key"], project_ai_api_key)
+		project_ai_mcp_text = value_get_string(aimap[?"mcp_text"], project_ai_mcp_text)
+	}
 }

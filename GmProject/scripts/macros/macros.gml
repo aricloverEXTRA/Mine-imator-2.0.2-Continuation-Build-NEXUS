@@ -24,6 +24,10 @@ function macros()
 	#macro mineimator_version_extra		""								// Additional suffix (e.g. "Alpha 1" or "Pre-Release 2")
 	#macro mineimator_version_full		(mineimator_version + ((mineimator_version_sub != "") ? " " + mineimator_version_sub : "") + ((mineimator_version_extra != "") ? " (" + mineimator_version_extra + ")" : ""))
 	#macro mineimator_version_date		"2026.06.16"
+	// PLUS-FORK: Fork identifier (additive; never edited by upstream merges)
+	#macro mineimator_fork_name			"Nexus"
+	#macro mineimator_fork_version		"1.0.0"
+	#macro mineimator_version_full_plus	(mineimator_version_full + " " + mineimator_fork_name + " " + mineimator_fork_version)
 	#macro minecraft_version			"26.2"
 	#macro gm_runtime					GM_runtime_version
 	

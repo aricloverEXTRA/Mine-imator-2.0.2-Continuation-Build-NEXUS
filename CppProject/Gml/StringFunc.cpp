@@ -123,6 +123,11 @@ namespace CppProject
 		return str.ToUpper();
 	}
 
+	StringType string_trim(StringType str)
+	{
+		return str.QStr().trimmed();
+	}
+
 	IntType string_width(StringType str)
 	{
 		if (PR->font)

@@ -16,21 +16,31 @@ function model_file_load_shape(map, res)
 		return null
 	}
 	
-	if (!ds_list_valid(map[?"from"]))
+	// PLUS-FORK: mesh shapes don't require from/to/uv (bounds are computed from vertices)
+	var shapetype = map[?"type"];
+	if (shapetype != "mesh")
 	{
-		log("Missing array \"from\"")
-		return null
+		if (!ds_list_valid(map[?"from"]))
+		{
+			log("Missing array \"from\"")
+			return null
+		}
+		
+		if (!ds_list_valid(map[?"to"]))
+		{
+			log("Missing array \"to\"")
+			return null
+		}
+		
+		if (!ds_list_valid(map[?"uv"]))
+		{
+			log("Missing array \"uv\"")
+			return null
+		}
 	}
-	
-	if (!ds_list_valid(map[?"to"]))
+	else if (!ds_list_valid(map[?"vertices"]))
 	{
-		log("Missing array \"to\"")
-		return null
-	}
-	
-	if (!ds_list_valid(map[?"uv"]))
-	{
-		log("Missing array \"uv\"")
+		log("Missing array \"vertices\"")
 		return null
 	}
 	
@@ -38,6 +48,9 @@ function model_file_load_shape(map, res)
 	{
 		// Type
 		type = map[?"type"]
+		
+		// PLUS-FORK: mesh vertex storage (created only for mesh shapes)
+		mesh_vertices = null
 		
 		// Description (optional)
 		description = value_get_string(map[?"description"], "")
@@ -164,8 +177,43 @@ function model_file_load_shape(map, res)
 		floor_box_uvs = other.floor_box_uvs
 		
 		// From/To
-		from_noscale = value_get_point3D(map[?"from"])
-		to_noscale = value_get_point3D(map[?"to"])
+		// PLUS-FORK: mesh shapes parse their vertices and compute the bounding box
+		if (type = "mesh")
+		{
+			mesh_vertices = ds_list_create()
+			var vlist = map[?"vertices"]
+			var vn = ds_list_size(vlist)
+			from_noscale = vec3(no_limit, no_limit, no_limit)
+			to_noscale = vec3(-no_limit, -no_limit, -no_limit)
+			
+			for (var i = 0; i < vn; i++)
+			{
+				var v = vlist[|i]
+				var px = v[|0]
+				var py = v[|1]
+				var pz = v[|2]
+				ds_list_add(mesh_vertices, px)
+				ds_list_add(mesh_vertices, py)
+				ds_list_add(mesh_vertices, pz)
+				ds_list_add(mesh_vertices, v[|3])
+				ds_list_add(mesh_vertices, v[|4])
+				ds_list_add(mesh_vertices, v[|5])
+				ds_list_add(mesh_vertices, v[|6])
+				ds_list_add(mesh_vertices, v[|7])
+				
+				if (px < from_noscale[X]) from_noscale[X] = px
+				if (px > to_noscale[X]) to_noscale[X] = px
+				if (py < from_noscale[Y]) from_noscale[Y] = py
+				if (py > to_noscale[Y]) to_noscale[Y] = py
+				if (pz < from_noscale[Z]) from_noscale[Z] = pz
+				if (pz > to_noscale[Z]) to_noscale[Z] = pz
+			}
+		}
+		else
+		{
+			from_noscale = value_get_point3D(map[?"from"])
+			to_noscale = value_get_point3D(map[?"to"])
+		}
 		if (type = "plane")
 			to_noscale[Y] = from_noscale[Y]
 		
@@ -220,8 +268,8 @@ function model_file_load_shape(map, res)
 		// Create matrix
 		matrix = matrix_create(position, vec3(0), vec3(1))
 		
-		// UV
-		uv = value_get_point2D(map[?"uv"])
+		// UV (PLUS-FORK: optional for mesh shapes)
+		uv = value_get_point2D(map[?"uv"], vec2(0, 0))
 		
 		// Wind
 		wind_wave = e_vertex_wave.NONE
@@ -255,6 +303,12 @@ function model_file_load_shape(map, res)
 		}
 		else if (type = "plane")
 			vbuffer_default = model_shape_generate_plane(vec3(0))
+		else if (type = "mesh")
+		{
+			// PLUS-FORK: mesh shapes (OBJ import), not bendable in this version
+			bend_shape = false
+			vbuffer_default = model_shape_generate_mesh(vec3(0))
+		}
 		else
 		{
 			vbuffer_default = null

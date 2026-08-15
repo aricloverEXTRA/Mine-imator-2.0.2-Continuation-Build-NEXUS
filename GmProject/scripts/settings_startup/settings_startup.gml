@@ -147,6 +147,10 @@ function settings_startup()
 	setting_reduced_motion = false
 	setting_wind_enable = true
 	
+	// AI companion (global)
+	setting_ai_companion_port = 8765
+	setting_ai_companion_autostart = false
+	
 	settings_load()
 	languages_load()
 	interface_update_instant()
