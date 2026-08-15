@@ -1,0 +1,94 @@
+name: Build Mine-imator 2.0.2 EXE
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+
+    env:
+      DEV_DIR: "C:\\Dev"
+      BUILD_DIR: "C:\\Dev\\Projects\\Mine-imator-build"
+      QT_VERSION: "5.15.9"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Build Dependencies (Perl, CMake, Jom)
+        run: |
+          choco install strawberryperl cmake jom -y
+          echo "C:\Strawberry\perl\bin" >> $env:GITHUB_PATH
+          echo "C:\Dev\Jom" >> $env:GITHUB_PATH
+
+      - name: Setup OpenSSL
+        run: |
+          New-Item -ItemType Directory -Force -Path "C:\Dev\OpenSSL"
+          choco install openssl -y
+          # Ensure OpenSSL bin/lib paths are aligned if needed
+
+      - name: Setup Qt 5.15.9 (Cached or Build Source)
+        id: cache-qt
+        uses: actions/cache@v6
+        with:
+          path: C:\Dev\Qt\${{ env:QT_VERSION }}
+          key: ${{ runner.os }}-qt-${{ env:QT_VERSION }}-v1
+
+      - name: Build Qt from Source (If Cache Misses)
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/qt/qt5.git C:\Dev\qt5 --branch ${{ env:QT_VERSION }}
+          cd C:\Dev\qt5
+          git submodule update --init qtbase qtdeclarative qtmultimedia qtsvg qttools
+          
+          New-Item -ItemType Directory -Force -Path "C:\Dev\Qt\${{ env:QT_VERSION }}"
+          cmd /c "call C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat x64 && `
+          configure -prefix C:\Dev\Qt\${{ env:QT_VERSION }} -release -opensource -confirm-license -nomake examples -nomake tests && `
+          jom && jom install"
+        shell: pwsh
+
+      - name: Run CppGen (GML to C++)
+        run: |
+          dotnet run --project CppGen\CppGen\CppGen.csproj -- GmProject CppProject\Generated CppProject\Asset\Sprites CppProject\Asset\Shaders CppGen\gml.json
+
+      - name: Configure CMake & Generate Visual Studio Project
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ env:BUILD_DIR }}"
+          cmake -S CppProject -B "${{ env:BUILD_DIR }}" -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="C:\Dev\Qt\${{ env:QT_VERSION }}"
+
+      - name: Copy Game Datafiles
+        run: |
+          $datafilesDest = "${{ env:BUILD_DIR }}\Release"
+          New-Item -ItemType Directory -Force -Path $datafilesDest
+          Copy-Item -Recurse -Force GmProject\datafiles\* $datafilesDest
+
+      - name: Build Mine-imator Executable (Release)
+        run: |
+          cmake --build "${{ env:BUILD_DIR }}" --config Release --parallel 4
+
+      - name: Run Release Packaging Script
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\make-release.ps1 "2.0.2 Nexus 1.0.0" -BuildDir "${{ env:BUILD_DIR }}"
+
+      - name: Upload Artifact (.zip Release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mine-imator-2.0.2-Nexus-Release
+          path: Builds\*.zip
