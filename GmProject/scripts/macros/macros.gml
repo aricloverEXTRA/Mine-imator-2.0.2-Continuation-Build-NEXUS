@@ -28,7 +28,7 @@ function macros()
 	#macro mineimator_fork_name			"Nexus"
 	#macro mineimator_fork_version		"1.0.0"
 	#macro mineimator_version_full_plus	(mineimator_version_full + " " + mineimator_fork_name + " " + mineimator_fork_version)
-	#macro minecraft_version			"26.2"
+	#macro minecraft_version			"26.3"
 	#macro gm_runtime					GM_runtime_version
 	
 	// File formats

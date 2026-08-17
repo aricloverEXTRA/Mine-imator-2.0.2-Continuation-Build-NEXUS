@@ -1774,6 +1774,17 @@
 				]
 			},
 			"default_state": "color=white"
+		},
+		{
+			"name": "shelf_mushroom",
+			"file": "shelf_mushroom.mimodel",
+			"states": {
+				"age": [
+					{ "value": "0", "texture": "block/shelf_mushroom_stage0" },
+					{ "value": "1", "texture": "block/shelf_mushroom_stage1" }
+				]
+			},
+			"default_state": "age=1"
 		}
 	],
 	"blocks": [
@@ -2321,6 +2332,26 @@
 			},
 			"default_state": "facing=east",
 			"id": "minecraft:straw_bed"
+		},
+		{
+			"name": "shelf_mushroom",
+			"file": "shelf_mushroom.json",
+			"states": {
+				"age": [ "0", "1" ],
+				"facing": [ "north", "south", "east", "west" ]
+			},
+			"default_state": "age=0,facing=north",
+			"timeline": {
+				"model": "shelf_mushroom",
+				"position": [ 8, 0, 8 ],
+				"rotation": {
+					"facing=north": [ 0, 0, 0 ],
+					"facing=south": [ 0, 180, 0 ],
+					"facing=east": [ 0, -90, 0 ],
+					"facing=west": [ 0, 90, 0 ]
+				}
+			},
+			"id": "minecraft:shelf_mushroom"
 		},
 		{
 			"name": "powered_rail",
@@ -8356,7 +8387,23 @@
 		"entity/mineimator/cape_valentine",
 		"entity/mineimator/cape_vanilla",
 		"entity/mineimator/cape_yearn",
-		"entity/mineimator/cape_zombie_horse"
+		"entity/mineimator/cape_zombie_horse",
+		"entity/cushion/black_cushion",
+		"entity/cushion/blue_cushion",
+		"entity/cushion/brown_cushion",
+		"entity/cushion/cyan_cushion",
+		"entity/cushion/gray_cushion",
+		"entity/cushion/green_cushion",
+		"entity/cushion/light_blue_cushion",
+		"entity/cushion/light_gray_cushion",
+		"entity/cushion/lime_cushion",
+		"entity/cushion/magenta_cushion",
+		"entity/cushion/orange_cushion",
+		"entity/cushion/pink_cushion",
+		"entity/cushion/purple_cushion",
+		"entity/cushion/red_cushion",
+		"entity/cushion/white_cushion",
+		"entity/cushion/yellow_cushion"
 	],
 	"block_sheet_size": [ 32, 48 ],
 	"block_textures": [
@@ -9578,7 +9625,22 @@
 		"block/black_bed_foot_west",
 		"block/black_bed_head_up",
 		"block/black_bed_head_east",
-		"block/black_bed_head_west"
+		"block/black_bed_head_west",
+		"block/bamboo_fence_gate_particle",
+		"block/orange_poplar_leaves",
+		"block/poplar_log",
+		"block/poplar_log_top",
+		"block/poplar_planks",
+		"block/poplar_sapling",
+		"block/red_poplar_leaves",
+		"block/shelf_mushroom_particle",
+		"block/shelf_mushroom_stage0",
+		"block/shelf_mushroom_stage1",
+		"block/straw_bed",
+		"block/straw_bed_particle",
+		"block/stripped_poplar_log",
+		"block/stripped_poplar_log_top",
+		"block/yellow_poplar_leaves"
 	],
 	"block_animated_sheet_size": [ 32, 2, 64 ],
 	"block_textures_animated": [
